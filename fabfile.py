@@ -22,14 +22,15 @@ def install_gem(gem):
     remote_dir = run('mktemp -d')
 
     put('%s/*.gem' % temp_dir, remote_dir)
+
     with cd(remote_dir):
         gem_files = run('ls *.gem')
 
-    print('gem files', gem_files)
-    with shell_env(GEM_HOME=remote_dir, GEM_PATH=remote_dir):
-        for gem in gem_files.split():
-            run('gem install --ignore-dependencies --local %s/%s' % (remote_dir, gem))
+    for gem in gem_files.split():
+        run('gem install --ignore-dependencies --local %s/%s' % (remote_dir, gem))
     
+def run_command(command):
+    run(command)
 
 def clean_derived():
     run('rm -rf ~/Library/Developer/Xcode/DerivedData/')
