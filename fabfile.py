@@ -53,14 +53,18 @@ def run_command(command):
 def run_xcode_install_script():
     pass
 
-def remote_xip_dir(xip_filename):
+def remote_package_dir(xip_filename=None):
     
-    xip_dir = path.join('XcodeXIPs', xip_filename)
+    xip_dir = 'XcodeInstallation'
+
+    if xip_filename:
+        xip_dir = path.join(xip_dir, xip_filename)
+
     return run('echo /var/tmp/%s' % xip_dir)
 
 @task
 @runs_once
-def propogate_file_to_all_hosts(remote_file, local_file=None):
+def propogate_file_to_all_hosts(remote_file=None, local_file=None):
 
     first_host = env.hosts[0]
     if local_file:
@@ -71,12 +75,14 @@ def propogate_file_to_all_hosts(remote_file, local_file=None):
     for host in map(lambda x: x.rstrip(), env.hosts[1:]) :
 
         for remote_file in remote_files:
-            with settings(prompts={'Password:': env.password}):
+            with settings(warn_only=True, prompts={'Password:': env.password}):
                 run('ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \'mkdir %s\'' % 
                         (env.user, host, path.dirname(remote_file)))
                 command = 'scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
                         %s %s@%s:%s' % (remote_file, env.user, host, remote_file)
                 run(command)
+
+    return remote_files
 
 @task
 def create_dir_if_needed(remote_dir):
@@ -88,7 +94,7 @@ def create_dir_if_needed(remote_dir):
 def copy_xcode_if_needed(xcode_location):
 
     xip_filename = path.basename(xcode_location)
-    remote_xip = remote_xip_dir(xip_filename)
+    remote_xip = remote_package_dir(xip_filename)
     #if compare_xcode_versions(xcode_location, remote_xip) == True:
     print('No need to copy, Xcode xips are the same')
     return remote_xip
@@ -117,14 +123,20 @@ def update_xcode(version_number, local_xcode_xip):
     remote_xip = copy_xcode_if_needed(local_xcode_xip)
 
     #create the same directory on all hosts
-    #create_dir_if_needed(path.dirname(remote_xip))
+    create_dir_if_needed(path.dirname(remote_xip))
 
     #this command only runs once
-    #propogate_file_to_all_hosts(remote_xip)
+    propogate_file_to_all_hosts(remote_xip)
 
     with settings(warn_only=True, prompts={'Password:': env.password}):
         run('yes \'%s\' | xcversion install --no-switch --no-show-release-notes \
                 --verbose %s --url=\'file://%s\'' % (env.password, version_number, remote_xip))
+
+@task
+def delete_xcode_xips():
+   
+    xips = remote_package_dir()
+    run('rm -r %s/*.xip' % xips)
 
 @task
 def build_agent(command):
@@ -137,6 +149,22 @@ def build_agent(command):
     else:
         run(agent_command)
 
+@task
+def install_dmg(local_dmg):
+
+
+    remote_dmg = propogate_file_to_all_hosts(local_file=local_dmg)
+    for dmg in remote_dmg:
+        mountpoint = '/Volumes/RemotelyMountedDMG'
+
+        if files.exists(mountpoint):
+            sudo('hdiutil unmount %s' % mountpoint)
+
+        sudo('hdiutil attach -mountpoint %s %s' % (mountpoint, dmg))
+        found_pkgs = run('find %s -name "*.pkg"' % mountpoint)
+        for pkg in found_pkgs.split('\n'):
+            sudo('installer -verbose -pkg \'%s\' -target /' % pkg)
+        sudo('hdiutil unmount %s' % mountpoint)
 
 @task
 def clean_derived():
