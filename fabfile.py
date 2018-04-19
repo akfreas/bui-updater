@@ -180,7 +180,8 @@ def clean_derived():
 @task
 def select_xcode(version, reboot=False):
 
-    build_agent('stop')
+    with settings(warn_only=True):
+        build_agent('stop')
 
     with settings(prompts={'Password:': env.password}):
         run('xcversion select %s' % version)
