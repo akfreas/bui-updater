@@ -13,6 +13,16 @@ if len(env.hosts) == 0:
         env.hosts = host_list.readlines()
 
 
+def remote_package_dir(xip_filename=None):
+    
+    xip_dir = 'XcodeInstallation'
+
+    if xip_filename:
+        xip_dir = path.join(xip_dir, xip_filename)
+
+    return run('echo /var/tmp/%s' % xip_dir)
+
+
 @task
 @runs_once
 def fetch_gem_locally(gem):
@@ -51,17 +61,6 @@ def run_command(command):
     with settings(warn_only=True):
         run(command)
 
-def run_xcode_install_script():
-    pass
-
-def remote_package_dir(xip_filename=None):
-    
-    xip_dir = 'XcodeInstallation'
-
-    if xip_filename:
-        xip_dir = path.join(xip_dir, xip_filename)
-
-    return run('echo /var/tmp/%s' % xip_dir)
 
 @task
 @runs_once
@@ -96,9 +95,10 @@ def copy_xcode_if_needed(xcode_location):
 
     xip_filename = path.basename(xcode_location)
     remote_xip = remote_package_dir(xip_filename)
-    #if compare_xcode_versions(xcode_location, remote_xip) == True:
-    print('No need to copy, Xcode xips are the same')
-    return remote_xip
+
+    if compare_xcode_versions(xcode_location, remote_xip) == True:
+        print('No need to copy, Xcode xips are the same')
+        return remote_xip
 
     print('Xcode versions are different, uploading our local version')
     
@@ -121,7 +121,8 @@ def compare_xcode_versions(local_xip, remote_xip):
 @task
 def update_xcode(version_number, local_xcode_xip):
 
-    build_agent('stop')
+    with settings(warn_only=True):
+        build_agent('stop')
 
     remote_xip = copy_xcode_if_needed(local_xcode_xip)
 
@@ -134,6 +135,7 @@ def update_xcode(version_number, local_xcode_xip):
     with settings(warn_only=True, prompts={'Password:': env.password}):
         run('yes \'%s\' | xcversion install --no-switch --no-show-release-notes \
                 --verbose %s --url=\'file://%s\'' % (env.password, version_number, remote_xip))
+
 
     build_agent('start')
 
