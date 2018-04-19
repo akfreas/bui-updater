@@ -121,6 +121,8 @@ def compare_xcode_versions(local_xip, remote_xip):
 @task
 def update_xcode(version_number, local_xcode_xip):
 
+    build_agent('stop')
+
     remote_xip = copy_xcode_if_needed(local_xcode_xip)
 
     #create the same directory on all hosts
@@ -132,6 +134,8 @@ def update_xcode(version_number, local_xcode_xip):
     with settings(warn_only=True, prompts={'Password:': env.password}):
         run('yes \'%s\' | xcversion install --no-switch --no-show-release-notes \
                 --verbose %s --url=\'file://%s\'' % (env.password, version_number, remote_xip))
+
+    build_agent('start')
 
 @task
 def delete_xcode_xips():
@@ -172,5 +176,19 @@ def clean_derived():
     run('rm -rf ~/Library/Developer/Xcode/DerivedData/')
 
 @task
+def select_xcode(version, reboot=False):
+
+    build_agent('stop')
+
+    with settings(prompts={'Password:': env.password}):
+        run('xcversion select %s' % version)
+        if reboot:
+            sudo('reboot')
+
+    build_agent('start')
+
+
+@task
 def check_xcode():
     run('xcode-select -p')
+    run('xcversion selected')
