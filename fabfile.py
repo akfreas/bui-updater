@@ -8,8 +8,9 @@ from os import path
 import subprocess
 
 
-with open('host_list.txt') as host_list:
-    env.hosts = host_list.readlines()
+if len(env.hosts) == 0:
+    with open('host_list.txt') as host_list:
+        env.hosts = host_list.readlines()
 
 
 @task
