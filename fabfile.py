@@ -91,6 +91,7 @@ def create_dir_if_needed(remote_dir):
         run('mkdir -pv %s' % remote_dir)
 
 @task
+@runs_once
 def copy_xcode_if_needed(xcode_location):
 
     xip_filename = path.basename(xcode_location)
@@ -121,8 +122,8 @@ def compare_xcode_versions(local_xip, remote_xip):
 @task
 def update_xcode(version_number, local_xcode_xip):
 
-    with settings(warn_only=True):
-        build_agent('stop')
+    #with settings(warn_only=True):
+    #    build_agent('stop')
 
     remote_xip = copy_xcode_if_needed(local_xcode_xip)
 
@@ -132,9 +133,9 @@ def update_xcode(version_number, local_xcode_xip):
     #this command only runs once
     propogate_file_to_all_hosts(remote_xip)
 
-    with settings(warn_only=True, prompts={'Password:': env.password}):
-        run('yes \'%s\' | xcversion install --no-switch --no-show-release-notes \
-                --verbose %s --url=\'file://%s\'' % (env.password, version_number, remote_xip))
+    with settings(warn_only=True, prompts={'Password: ': env.password}):
+        run('xcversion install --no-switch --no-show-release-notes \
+                --verbose %s --url=\'file://%s\'' % (version_number, remote_xip))
 
 
     build_agent('start')
@@ -148,13 +149,17 @@ def delete_xcode_xips():
 @task
 def build_agent(command):
     
+    agent_command = '/usr/local/buildAgent/bin/agent.sh %s' % command
+
+    with settings(warn_only=True):
+        run(agent_command)
     users = sudo('users')
 
-    agent_command = '/usr/local/buildAgent/bin/agent.sh %s' % command
-    if 'ios-crew' in users:
-        sudo(agent_command, user='ios-crew')
-    else:
-        run(agent_command)
+    with settings(warn_only=True):
+        if 'ios-crew' in users:
+            sudo(agent_command, user='ios-crew')
+        else:
+            run(agent_command)
 
 @task
 def install_dmg(local_dmg):
@@ -175,7 +180,8 @@ def install_dmg(local_dmg):
 
 @task
 def clean_derived():
-    run('rm -rf ~/Library/Developer/Xcode/DerivedData/')
+    with settings(warn_only=True):
+        run('rm -rf ~/Library/Developer/Xcode/DerivedData/')
 
 @task
 def select_xcode(version, reboot=False):
