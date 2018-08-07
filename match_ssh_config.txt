@@ -1,0 +1,4 @@
+Host github-match
+  User git
+  Hostname github.com
+  IdentityFile ~/.ssh/github-match.key

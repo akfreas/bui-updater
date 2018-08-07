@@ -1,10 +1,11 @@
 from fabric.api import local
-from fabric.operations import put
+from fabric.operations import put, get
 from tempfile import mkdtemp
 from fabric.context_managers import shell_env
 from fabric.contrib import files
 from fabric.api import *
 from os import path
+from StringIO import StringIO
 import subprocess
 
 
@@ -22,6 +23,41 @@ def remote_package_dir(xip_filename=None):
 
     return run('echo /var/tmp/%s' % xip_dir)
 
+
+@task
+def add_match_github_key_and_config(key_file_path):
+    file_buf = StringIO()
+
+    users = sudo('users')
+    default_user = 'iosbui'
+    if 'ios-crew' in users:
+        default_user = 'ios-crew'
+
+
+    config_path = '/Users/%s/.ssh/config' % default_user
+    match_key_path = '/Users/%s/.ssh/match-github.key' % default_user
+    put(key_file_path, match_key_path, use_sudo=True)
+
+    if files.exists(config_path):
+        get(config_path, file_buf, use_sudo=True)
+    else:
+        file_buf.write('')
+
+    content=file_buf.getvalue()
+
+    with open('./match_ssh_config.txt') as match_config_fp:
+        match_config = '\r\r' + match_config_fp.read()
+
+    content = content.replace(match_config, '')
+    content += match_config
+
+    file_buf = StringIO()
+    file_buf.write(content)
+
+    put(remote_path=config_path, local_path=file_buf, use_sudo=True)
+
+    for path in [config_path, match_key_path]:
+        sudo('chown %s %s' % (default_user, path))
 
 @task
 @runs_once
