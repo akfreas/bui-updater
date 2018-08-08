@@ -35,8 +35,8 @@ def add_match_github_key_and_config(key_file_path):
 
 
     config_path = '/Users/%s/.ssh/config' % default_user
-    match_key_path = '/Users/%s/.ssh/match-github.key' % default_user
-    put(key_file_path, match_key_path, use_sudo=True)
+    match_key_path = '/Users/%s/.ssh/github-match.key' % default_user
+    put(key_file_path, match_key_path, use_sudo=True, mode=0600)
 
     if files.exists(config_path):
         get(config_path, file_buf, use_sudo=True)
