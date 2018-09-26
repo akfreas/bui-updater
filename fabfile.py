@@ -6,6 +6,7 @@ from fabric.contrib import files
 from fabric.api import *
 from os import path
 from StringIO import StringIO
+import re
 import subprocess
 
 
@@ -30,8 +31,9 @@ def add_match_github_key_and_config(key_file_path):
 
     users = sudo('users')
     default_user = 'iosbui'
-    if 'ios-crew' in users:
-        default_user = 'ios-crew'
+    matching_user = re.match('ios-crew', users, re.IGNORECASE)
+    if matching_user:
+        default_user = matching_user.group()
 
 
     config_path = '/Users/%s/.ssh/config' % default_user
