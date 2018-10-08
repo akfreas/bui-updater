@@ -50,8 +50,7 @@ def add_match_github_key_and_config(key_file_path):
     with open('./match_ssh_config.txt') as match_config_fp:
         match_config = '\r\r' + match_config_fp.read()
 
-    content = content.replace(match_config, '')
-    content += match_config
+    content = match_config
 
     file_buf = StringIO()
     file_buf.write(content)

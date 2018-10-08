@@ -2,3 +2,4 @@ Host github-match
   User git
   Hostname github.com
   IdentityFile ~/.ssh/github-match.key
+  ProxyCommand          /usr/local/bin/corkscrew tuvprx.rz.is 3128 %h %p
